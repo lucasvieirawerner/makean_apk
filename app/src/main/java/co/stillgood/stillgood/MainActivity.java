@@ -1,23 +1,25 @@
 package co.stillgood.stillgood;
 
+import android.content.BroadcastReceiver;
+import android.content.Context;
+import android.content.Intent;
+import android.content.IntentFilter;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
 import android.os.Bundle;
 import android.support.v7.app.AppCompatActivity;
 import android.view.KeyEvent;
+import android.view.View;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
+import android.widget.LinearLayout;
 
 public class MainActivity extends AppCompatActivity {
 
     WebView mWebView;
-
-    private boolean isNetworkAvailable() {
-        ConnectivityManager connectivityManager = (ConnectivityManager) getSystemService(getBaseContext().CONNECTIVITY_SERVICE);
-        NetworkInfo activeNetworkInfo = connectivityManager.getActiveNetworkInfo();
-        return activeNetworkInfo != null && activeNetworkInfo.isConnected();
-    }
+    LinearLayout mLayout;
+    private BroadcastReceiver mReceiver;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -31,6 +33,40 @@ public class MainActivity extends AppCompatActivity {
         webSettings.setJavaScriptEnabled(true);
 
         mWebView.setWebViewClient(new WebViewClient());
+
+        mLayout = (LinearLayout) findViewById(R.id.layout);
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+
+        IntentFilter filter = new IntentFilter("android.net.conn.CONNECTIVITY_CHANGE");
+        mReceiver = new BroadcastReceiver() {
+            @Override
+            public void onReceive(Context context, Intent intent) {
+                if (intent.getAction().equals(ConnectivityManager.CONNECTIVITY_ACTION)) {
+
+                    ConnectivityManager cm = (ConnectivityManager)context.getSystemService(Context.CONNECTIVITY_SERVICE);
+                    NetworkInfo activeNetwork = cm.getActiveNetworkInfo();
+                    boolean isConnected = activeNetwork != null && activeNetwork.isConnectedOrConnecting();
+                    if (isConnected) {
+                        mLayout.setVisibility(View.GONE);
+                        mWebView.setVisibility(View.VISIBLE);
+                    } else {
+                        mWebView.setVisibility(View.GONE);
+                        mLayout.setVisibility(View.VISIBLE);
+                    }
+                }
+            }
+        };
+        this.registerReceiver(mReceiver, filter);
+    }
+
+    @Override
+    protected void onPause() {
+        super.onPause();
+        this.unregisterReceiver(this.mReceiver);
     }
 
     @Override
